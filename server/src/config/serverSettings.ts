@@ -135,8 +135,8 @@ export async function loadServerSettings(dataDir: string): Promise<ServerSetting
         sources.webappHost = 'file'
     }
 
-    // webappPort: env > file > 3006
-    let webappPort = 3006
+    // webappPort: env > file > 3007
+    let webappPort = 3007
     if (process.env.WEBAPP_PORT) {
         const parsed = parseInt(process.env.WEBAPP_PORT, 10)
         if (!Number.isFinite(parsed) || parsed <= 0) {

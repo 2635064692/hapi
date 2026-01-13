@@ -18,8 +18,8 @@ export type MessageWindowState = {
     messagesVersion: number
 }
 
-export const VISIBLE_WINDOW_SIZE = 400
-export const PENDING_WINDOW_SIZE = 200
+export const VISIBLE_WINDOW_SIZE = 40
+export const PENDING_WINDOW_SIZE = 20
 const PAGE_SIZE = 50
 const PENDING_OVERFLOW_WARNING = 'New messages arrived while you were away. Scroll to bottom to refresh.'
 

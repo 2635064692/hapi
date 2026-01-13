@@ -1,0 +1,15 @@
+services:
+  hapi:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - ~/.claude:/root/.claude
+      - ~/.codex:/root/.codex
+    network_mode: host
+    environment:
+      - NODE_ENV=development
+    stdin_open: true
+    tty: true
