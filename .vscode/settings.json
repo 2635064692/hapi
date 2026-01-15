@@ -1,0 +1,13 @@
+{
+  "typescript.tsdk": "web/node_modules/typescript/lib",
+  "editor.formatOnSave": true,
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "debug.javascript.autoAttachFilter": "smart",
+  "files.exclude": {
+    "**/node_modules": true,
+    "**/.git": true
+  },
+  "search.exclude": {
+    "**/node_modules": true
+  }
+}

@@ -1,0 +1,47 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "vite:dev",
+      "type": "shell",
+      "command": "cd ${workspaceFolder}/web && bun run dev",
+      "isBackground": true,
+      "problemMatcher": {
+        "owner": "vite",
+        "pattern": {
+          "regexp": "^$"
+        },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": "VITE",
+          "endsPattern": "ready in|Local:|localhost"
+        }
+      },
+      "presentation": {
+        "reveal": "silent",
+        "panel": "dedicated",
+        "group": "dev"
+      }
+    },
+    {
+      "label": "vite:build",
+      "type": "shell",
+      "command": "cd ${workspaceFolder}/web && bun run build",
+      "problemMatcher": ["$tsc"],
+      "group": "build"
+    },
+    {
+      "label": "typecheck",
+      "type": "shell",
+      "command": "cd ${workspaceFolder}/web && bun run typecheck",
+      "problemMatcher": ["$tsc"],
+      "group": "test"
+    },
+    {
+      "label": "install",
+      "type": "shell",
+      "command": "cd ${workspaceFolder}/web && bun install",
+      "problemMatcher": []
+    }
+  ]
+}

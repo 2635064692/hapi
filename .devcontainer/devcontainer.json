@@ -1,0 +1,24 @@
+{
+  "name": "HAPI Dev Container",
+  "dockerComposeFile": "../docker-compose.yml",
+  "service": "hapi",
+  "workspaceFolder": "/app",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode",
+        "bradlc.vscode-tailwindcss",
+        "ms-vscode.vscode-typescript-next"
+      ],
+      "settings": {
+        "typescript.tsdk": "/app/web/node_modules/typescript/lib",
+        "editor.formatOnSave": true,
+        "editor.defaultFormatter": "esbenp.prettier-vscode",
+        "debug.javascript.autoAttachFilter": "smart"
+      }
+    }
+  },
+  "forwardPorts": [5174, 3000],
+  "postStartCommand": "cd /app/web && bun install"
+}

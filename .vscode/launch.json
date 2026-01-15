@@ -1,0 +1,37 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Debug React (Chrome)",
+      "type": "chrome",
+      "request": "launch",
+      "url": "http://localhost:5174",
+      "webRoot": "${workspaceFolder}/web/src",
+      "sourceMapPathOverrides": {
+        "/@fs/*": "${workspaceFolder}/*",
+        "/src/*": "${workspaceFolder}/web/src/*"
+      },
+      "preLaunchTask": "vite:dev"
+    },
+    {
+      "name": "Debug React (Edge)",
+      "type": "msedge",
+      "request": "launch",
+      "url": "http://localhost:5174",
+      "webRoot": "${workspaceFolder}/web/src",
+      "sourceMapPathOverrides": {
+        "/@fs/*": "${workspaceFolder}/*",
+        "/src/*": "${workspaceFolder}/web/src/*"
+      },
+      "preLaunchTask": "vite:dev"
+    },
+    {
+      "name": "Attach to Browser",
+      "type": "chrome",
+      "request": "attach",
+      "port": 9222,
+      "webRoot": "${workspaceFolder}/web/src",
+      "url": "http://localhost:5174"
+    }
+  ]
+}

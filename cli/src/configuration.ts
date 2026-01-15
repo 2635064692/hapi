@@ -29,7 +29,7 @@ class Configuration {
 
     constructor() {
         // Server configuration
-        this._serverUrl = process.env.HAPI_SERVER_URL || 'http://localhost:3007'
+        this._serverUrl = process.env.HAPI_SERVER_URL || 'http://localhost:3006'
         this._cliApiToken = process.env.CLI_API_TOKEN || ''
 
         // Check if we're running as daemon based on process args
