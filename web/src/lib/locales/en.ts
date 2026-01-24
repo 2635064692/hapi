@@ -100,6 +100,8 @@ export default {
   'newSession.type.worktree.desc': 'Create a new worktree next to repo',
   'newSession.type.worktree.placeholder': 'feature-x (default 1228-xxxx)',
   'newSession.agent': 'Agent',
+  'newSession.model': 'Model',
+  'newSession.model.optional': 'optional',
   'newSession.yolo': 'YOLO mode',
   'newSession.yolo.title': 'Bypass approvals and sandbox',
   'newSession.yolo.desc': 'Uses dangerous agent flags when spawning.',
@@ -188,7 +190,26 @@ export default {
   'composer.terminal': 'Terminal',
   'composer.abort': 'Abort',
   'composer.switchRemote': 'Switch to remote mode',
+  'composer.attach': 'Attach file',
   'composer.send': 'Send',
+  'composer.stop': 'Stop',
+  'composer.voice': 'Voice assistant',
+
+  // Voice assistant
+  'voice.connecting': 'Connecting...',
+  'voice.active': 'Active',
+  'voice.muted': 'Muted',
+  'voice.error': 'Error',
+  'voice.mute': 'Mute',
+  'voice.unmute': 'Unmute',
+  'voice.end': 'End',
+  'voice.error.micPermission': 'Microphone permission denied',
+  'voice.error.network': 'Network error',
+  'voice.error.notInitialized': 'Voice session not initialized',
+  'voice.error.startFailed': 'Failed to start voice session',
+  'voice.error.notAllowed': 'Voice not allowed',
+  'voice.error.connection': 'Connection error',
+  'voice.dismiss': 'Dismiss',
 
   // Banners
   'offline.title': 'Offline',
@@ -205,6 +226,14 @@ export default {
   'language.title': 'Language',
   'language.english': 'English',
   'language.chinese': '简体中文',
+
+  // Settings page
+  'settings.title': 'Settings',
+  'settings.language.title': 'Language',
+  'settings.language.label': 'Language',
+  'settings.voice.title': 'Voice Assistant',
+  'settings.voice.language': 'Voice Language',
+  'settings.voice.autoDetect': 'Auto-detect',
 
   // Misc
   'misc.noMachines': 'No machines available',

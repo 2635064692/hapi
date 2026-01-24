@@ -10,13 +10,16 @@ import { bootstrapSession } from '@/agent/sessionFactory';
 import { createModeChangeHandler, createRunnerLifecycle, setControlledByUser } from '@/agent/runnerLifecycle';
 import { isPermissionModeAllowedForFlavor } from '@hapi/protocol';
 import { PermissionModeSchema } from '@hapi/protocol/schemas';
+import { formatMessageWithAttachments } from '@/utils/attachmentFormatter';
 
 export { emitReadyIfIdle } from './utils/emitReadyIfIdle';
 
 export async function runCodex(opts: {
-    startedBy?: 'daemon' | 'terminal';
+    startedBy?: 'runner' | 'terminal';
     codexArgs?: string[];
     permissionMode?: PermissionMode;
+    resumeSessionId?: string;
+    model?: string;
 }): Promise<void> {
     const workingDirectory = process.cwd();
     const startedBy = opts.startedBy ?? 'terminal';
@@ -33,7 +36,7 @@ export async function runCodex(opts: {
         agentState: state
     });
 
-    const startingMode: 'local' | 'remote' = startedBy === 'daemon' ? 'remote' : 'local';
+    const startingMode: 'local' | 'remote' = startedBy === 'runner' ? 'remote' : 'local';
 
     setControlledByUser(session, startingMode);
 
@@ -46,6 +49,7 @@ export async function runCodex(opts: {
     const sessionWrapperRef: { current: CodexSession | null } = { current: null };
 
     let currentPermissionMode: PermissionMode = opts.permissionMode ?? 'default';
+    const currentModel = opts.model;
 
     const lifecycle = createRunnerLifecycle({
         session,
@@ -70,9 +74,11 @@ export async function runCodex(opts: {
         logger.debug(`[Codex] User message received with permission mode: ${currentPermissionMode}`);
 
         const enhancedMode: EnhancedMode = {
-            permissionMode: messagePermissionMode ?? 'default'
+            permissionMode: messagePermissionMode ?? 'default',
+            model: currentModel
         };
-        messageQueue.push(message.content.text, enhancedMode);
+        const formattedText = formatMessageWithAttachments(message.content.text, message.content.attachments);
+        messageQueue.push(formattedText, enhancedMode);
     });
 
     const formatFailureReason = (message: string): string => {
@@ -116,6 +122,7 @@ export async function runCodex(opts: {
             codexCliOverrides,
             startedBy,
             permissionMode: currentPermissionMode,
+            resumeSessionId: opts.resumeSessionId,
             onModeChange: createModeChangeHandler(session),
             onSessionReady: (instance) => {
                 sessionWrapperRef.current = instance;

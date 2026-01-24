@@ -102,6 +102,8 @@ export default {
   'newSession.type.worktree.desc': '在仓库旁创建新工作树',
   'newSession.type.worktree.placeholder': 'feature-x (默认 1228-xxxx)',
   'newSession.agent': '代理',
+  'newSession.model': '模型',
+  'newSession.model.optional': '可选',
   'newSession.yolo': 'YOLO 模式',
   'newSession.yolo.title': '跳过审批和沙箱',
   'newSession.yolo.desc': '启动时使用危险的代理标志。',
@@ -190,7 +192,26 @@ export default {
   'composer.terminal': '终端',
   'composer.abort': '中止',
   'composer.switchRemote': '切换到远程模式',
+  'composer.attach': '添加文件',
   'composer.send': '发送',
+  'composer.stop': '停止',
+  'composer.voice': '语音助手',
+
+  // Voice assistant
+  'voice.connecting': '连接中...',
+  'voice.active': '活跃',
+  'voice.muted': '已静音',
+  'voice.error': '错误',
+  'voice.mute': '静音',
+  'voice.unmute': '取消静音',
+  'voice.end': '结束',
+  'voice.error.micPermission': '麦克风权限被拒绝',
+  'voice.error.network': '网络错误',
+  'voice.error.notInitialized': '语音会话未初始化',
+  'voice.error.startFailed': '启动语音会话失败',
+  'voice.error.notAllowed': '语音功能不可用',
+  'voice.error.connection': '连接错误',
+  'voice.dismiss': '关闭',
 
   // Banners
   'offline.title': '离线',
@@ -207,6 +228,14 @@ export default {
   'language.title': '语言',
   'language.english': 'English',
   'language.chinese': '简体中文',
+
+  // Settings page
+  'settings.title': '设置',
+  'settings.language.title': '语言',
+  'settings.language.label': '语言',
+  'settings.voice.title': '语音助手',
+  'settings.voice.language': '语音语言',
+  'settings.voice.autoDetect': '自动检测',
 
   // Misc
   'misc.noMachines': '无可用机器',

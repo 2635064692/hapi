@@ -6,6 +6,64 @@ Install the HAPI CLI and set up the server.
 
 - Claude Code, OpenAI Codex CLI, or Google Gemini CLI installed
 
+Verify your CLI is installed:
+
+```bash
+# For Claude Code
+claude --version
+
+# For OpenAI Codex CLI
+codex --version
+
+# For Google Gemini CLI
+gemini --version
+```
+
+## Architecture
+
+HAPI has three components:
+
+| Component | Role | Required |
+|-----------|------|----------|
+| **CLI** | Wraps AI agents (Claude/Codex/Gemini), runs sessions | Yes |
+| **Server** | Central hub: persistence, real-time sync, remote access | Yes |
+| **Runner** | Background service for remote session spawning | Optional |
+
+### How they work together
+
+```
+┌─────────────────────────────────────────────────────┐
+│              Your Machine                           │
+│                                                     │
+│  ┌─────────┐    Socket.IO    ┌─────────────┐       │
+│  │  CLI    │◄───────────────►│   Server    │       │
+│  │+ Agent  │                 │  + SQLite   │       │
+│  └─────────┘                 └──────┬──────┘       │
+│       ▲                             │ SSE          │
+│       │ spawn                       ▼              │
+│  ┌────┴────┐                 ┌─────────────┐       │
+│  │ Runner  │◄────RPC────────►│   Web App   │       │
+│  │(背景)   │                 └─────────────┘       │
+│  └─────────┘                                       │
+└─────────────────────────────────────────────────────┘
+                    │
+           [Tunnel / Public URL]
+                    │
+              ┌─────▼─────┐
+              │ Phone/Web │
+              └───────────┘
+```
+
+- **CLI**: Start a session with `hapi`. The CLI wraps your AI agent and syncs with the server.
+- **Server**: Run `hapi server`. Stores sessions, handles permissions, enables remote access.
+- **Runner**: Run `hapi runner start`. Lets you spawn sessions from phone/web without keeping a terminal open.
+
+### Typical workflows
+
+**Local only**: `hapi server` → `hapi` → work in terminal
+
+**Remote access**: `hapi server --relay` → `hapi runner start` → control from phone/web
+
 ## Install the CLI
 
 ```bash
@@ -60,10 +118,24 @@ The server can be deployed on:
 - **Local desktop** (default) - Run on your development machine
 - **Remote server** - Deploy on a VPS, cloud server, or any machine with network access
 
-Start the server:
+### Default: Public Relay (recommended)
+
+```bash
+hapi server --relay
+```
+
+The terminal displays a URL and QR code. Scan to access from anywhere.
+
+- **End-to-end encrypted** with WireGuard + TLS
+- No configuration needed
+- Works behind NAT, firewalls, and any network
+
+### Local Only
 
 ```bash
 hapi server
+# or
+hapi server --no-relay
 ```
 
 The server listens on `http://localhost:3006` by default.
@@ -81,7 +153,7 @@ On first run, HAPI:
 ~/.hapi/
 ├── settings.json      # Main configuration
 ├── hapi.db           # SQLite database (server)
-├── daemon.state.json  # Daemon process state
+├── runner.state.json  # Runner process state
 └── logs/             # Log files
 ```
 </details>
@@ -92,11 +164,15 @@ On first run, HAPI:
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `CLI_API_TOKEN` | Auto-generated | Shared secret for authentication |
-| `HAPI_SERVER_URL` | `http://localhost:3006` | Server URL for CLI |
-| `WEBAPP_PORT` | `3006` | HTTP server port |
+| `HAPI_API_URL` | `http://localhost:3006` | Server URL for CLI |
+| `HAPI_LISTEN_HOST` | `127.0.0.1` | HTTP server bind address |
+| `HAPI_LISTEN_PORT` | `3006` | HTTP server port |
+| `HAPI_PUBLIC_URL` | - | Public URL for external access |
 | `HAPI_HOME` | `~/.hapi` | Config directory path |
 | `DB_PATH` | `~/.hapi/hapi.db` | Database file path |
 | `CORS_ORIGINS` | - | Allowed CORS origins |
+| `ELEVENLABS_API_KEY` | - | ElevenLabs API key for voice |
+| `ELEVENLABS_AGENT_ID` | Auto-created | Custom ElevenLabs agent ID |
 </details>
 
 ## CLI setup
@@ -104,7 +180,7 @@ On first run, HAPI:
 If the server is not on localhost, set these before running `hapi`:
 
 ```bash
-export HAPI_SERVER_URL="http://your-server:3006"
+export HAPI_API_URL="http://your-server:3006"
 export CLI_API_TOKEN="your-token-here"
 ```
 
@@ -130,20 +206,42 @@ Each machine gets a unique ID stored in `~/.hapi/settings.json`. This allows:
 
 ## Operations
 
-### Remote access
+### Self-hosted tunnels
 
-If the server is deployed on a machine with a **public IP**, you can access it directly via `http://your-server-ip:3006`. Use HTTPS (via reverse proxy like Nginx or Caddy) for production.
-
-If the server is behind NAT, use one of these options:
+If you prefer not to use the public relay (e.g., for lower latency or self-managed infrastructure), you can use these alternatives:
 
 <details>
-<summary>Cloudflare Tunnel (recommended for NAT)</summary>
+<summary>Cloudflare Tunnel</summary>
 
 https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/
 
+**Quick tunnel** (temporary URL, changes on restart):
+
 ```bash
-export WEBAPP_URL="https://your-tunnel.trycloudflare.com"
+# Install cloudflared: https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/
+cloudflared tunnel --protocol http2 --url http://localhost:3006
 ```
+
+Copy the generated URL and set it:
+
+```bash
+export HAPI_PUBLIC_URL="https://your-tunnel.trycloudflare.com"
+hapi server
+```
+
+**Named tunnel** (persistent URL):
+
+```bash
+# Create and configure a named tunnel
+cloudflared tunnel create hapi
+cloudflared tunnel route dns hapi hapi.yourdomain.com
+
+# Run the tunnel
+cloudflared tunnel --protocol http2 run hapi
+```
+
+> **Note:** Use `--protocol http2` instead of QUIC (the default) to avoid potential timeout issues with long-lived connections.
+
 </details>
 
 <details>
@@ -153,6 +251,7 @@ https://tailscale.com/download
 
 ```bash
 sudo tailscale up
+hapi server
 ```
 
 Access via your Tailscale IP:
@@ -163,11 +262,11 @@ http://100.x.x.x:3006
 </details>
 
 <details>
-<summary>ngrok</summary>
+<summary>Public IP / Reverse Proxy</summary>
 
-```bash
-ngrok http 3006
-```
+If the server has a public IP, access directly via `http://your-server-ip:3006`.
+
+Use HTTPS (via Nginx, Caddy, etc.) for production.
 </details>
 
 ### Telegram setup
@@ -180,29 +279,258 @@ Enable Telegram notifications and Mini App access:
 
 ```bash
 export TELEGRAM_BOT_TOKEN="your-bot-token"
-export WEBAPP_URL="https://your-public-url"
+export HAPI_PUBLIC_URL="https://your-public-url"
 
 hapi server
 ```
 
 Then message your bot with `/start`, open the app, and enter your `CLI_API_TOKEN`.
 
-### Daemon setup
+**Troubleshooting:**
+
+- If binding fails, verify `HAPI_PUBLIC_URL` is accessible from the internet
+- Telegram Mini App requires HTTPS (not HTTP)
+
+### Runner setup
 
 Run a background service for remote session spawning:
 
 ```bash
-hapi daemon start
-hapi daemon status
-hapi daemon logs
-hapi daemon stop
+hapi runner start
+hapi runner status
+hapi runner logs
+hapi runner stop
 ```
 
-With the daemon running:
+With the runner running:
 
 - Your machine appears in the "Machines" list
 - You can spawn sessions remotely from the web app
 - Sessions persist even when the terminal is closed
+
+<details>
+<summary>Alternative: pm2</summary>
+
+If you prefer pm2 for process management:
+
+```bash
+pm2 start "hapi runner start --foreground" --name hapi-runner
+pm2 save
+```
+</details>
+
+### Background service deployment
+
+Keep HAPI running persistently so it survives terminal closes, system restarts, and continues running in the background.
+
+<details>
+<summary>Quick: nohup</summary>
+
+Simple one-liner for quick background runs:
+
+```bash
+# Server
+nohup hapi server --relay > ~/.hapi/logs/server.log 2>&1 &
+
+# Runner
+nohup hapi runner start --foreground > ~/.hapi/logs/runner.log 2>&1 &
+```
+
+View logs:
+
+```bash
+tail -f ~/.hapi/logs/server.log
+tail -f ~/.hapi/logs/runner.log
+```
+
+Stop processes:
+
+```bash
+pkill -f "hapi server"
+pkill -f "hapi runner"
+```
+</details>
+
+<details>
+<summary>pm2 (recommended for Node.js users)</summary>
+
+pm2 provides process management with auto-restart on crashes and system reboot.
+
+```bash
+# Install pm2
+npm install -g pm2
+
+# Start server and runner
+pm2 start "hapi server --relay" --name hapi-server
+pm2 start "hapi runner start --foreground" --name hapi-runner
+
+# View status and logs
+pm2 status
+pm2 logs hapi-server
+pm2 logs hapi-runner
+
+# Auto-restart on system reboot
+pm2 startup    # Follow the printed instructions
+pm2 save       # Save current process list
+```
+</details>
+
+<details>
+<summary>macOS: launchd</summary>
+
+Create plist files for automatic startup on macOS.
+
+**Server** (`~/Library/LaunchAgents/com.hapi.server.plist`):
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.hapi.server</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/usr/local/bin/hapi</string>
+        <string>server</string>
+        <string>--relay</string>
+    </array>
+    <key>RunAtLoad</key>
+    <true/>
+    <key>KeepAlive</key>
+    <true/>
+    <key>StandardOutPath</key>
+    <string>/Users/YOUR_USERNAME/.hapi/logs/server.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/YOUR_USERNAME/.hapi/logs/server.log</string>
+</dict>
+</plist>
+```
+
+**Runner** (`~/Library/LaunchAgents/com.hapi.runner.plist`):
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.hapi.runner</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/usr/local/bin/hapi</string>
+        <string>runner</string>
+        <string>start</string>
+        <string>--foreground</string>
+    </array>
+    <key>RunAtLoad</key>
+    <true/>
+    <key>KeepAlive</key>
+    <true/>
+    <key>StandardOutPath</key>
+    <string>/Users/YOUR_USERNAME/.hapi/logs/runner.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/YOUR_USERNAME/.hapi/logs/runner.log</string>
+</dict>
+</plist>
+```
+
+Load/unload services:
+
+```bash
+# Load (start)
+launchctl load ~/Library/LaunchAgents/com.hapi.server.plist
+launchctl load ~/Library/LaunchAgents/com.hapi.runner.plist
+
+# Unload (stop)
+launchctl unload ~/Library/LaunchAgents/com.hapi.server.plist
+launchctl unload ~/Library/LaunchAgents/com.hapi.runner.plist
+```
+
+> **macOS sleep note:** macOS may suspend background processes when the display sleeps. Use `caffeinate` to prevent this:
+> ```bash
+> caffeinate -dimsu hapi server --relay
+> ```
+> Or run `caffeinate -dimsu` in a separate terminal while HAPI is running.
+</details>
+
+<details>
+<summary>Linux: systemd</summary>
+
+Create user-level systemd services for automatic startup.
+
+**Server** (`~/.config/systemd/user/hapi-server.service`):
+
+```ini
+[Unit]
+Description=HAPI Server
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/hapi server --relay
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=default.target
+```
+
+**Runner** (`~/.config/systemd/user/hapi-runner.service`):
+
+```ini
+[Unit]
+Description=HAPI Runner
+After=network.target hapi-server.service
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/hapi runner start --foreground
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=default.target
+```
+
+Enable and start:
+
+```bash
+# Reload systemd
+systemctl --user daemon-reload
+
+# Enable (auto-start on login)
+systemctl --user enable hapi-server
+systemctl --user enable hapi-runner
+
+# Start now
+systemctl --user start hapi-server
+systemctl --user start hapi-runner
+
+# View status/logs
+systemctl --user status hapi-server
+journalctl --user -u hapi-server -f
+```
+
+> **Persist after logout:** To keep services running even when not logged in:
+> ```bash
+> loginctl enable-linger $USER
+> ```
+</details>
+
+### Voice assistant setup
+
+Enable voice control:
+
+1. Get an API key from [elevenlabs.io](https://elevenlabs.io/app/settings/api-keys)
+2. Set the environment variable:
+
+```bash
+export ELEVENLABS_API_KEY="your-api-key"
+hapi server --relay
+```
+
+See [Voice Assistant](./voice-assistant.md) for usage details.
 
 ### Security notes
 

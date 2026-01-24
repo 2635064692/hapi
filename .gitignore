@@ -8,6 +8,10 @@
 **/*.tsbuildinfo
 server/src/web/embeddedAssets.generated.ts
 
+# Downloaded tools (fetched at build time)
+server/tools/tunwg/tunwg-*
+server/tools/tunwg/*.exe
+
 # Env files (can contain secrets)
 **/.env
 **/.env.*
@@ -32,3 +36,6 @@ coverage/
 .claude/settings.local.json
 localdocs/
 execplan/
+
+# Generated npm bundle output (local)
+cli/npm/main/

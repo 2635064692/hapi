@@ -8,6 +8,7 @@ import type {
 
 export type {
     AgentState,
+    AttachmentMetadata,
     ModelMode,
     PermissionMode,
     Session,
@@ -104,6 +105,17 @@ export type FileReadResponse = {
     error?: string
 }
 
+export type UploadFileResponse = {
+    success: boolean
+    path?: string
+    error?: string
+}
+
+export type DeleteUploadResponse = {
+    success: boolean
+    error?: string
+}
+
 export type GitFileStatus = {
     fileName: string
     filePath: string
@@ -133,6 +145,17 @@ export type SlashCommand = {
 export type SlashCommandsResponse = {
     success: boolean
     commands?: SlashCommand[]
+    error?: string
+}
+
+export type SkillSummary = {
+    name: string
+    description?: string
+}
+
+export type SkillsResponse = {
+    success: boolean
+    skills?: SkillSummary[]
     error?: string
 }
 

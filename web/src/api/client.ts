@@ -1,5 +1,7 @@
 import type {
+    AttachmentMetadata,
     AuthResponse,
+    DeleteUploadResponse,
     FileReadResponse,
     FileSearchResponse,
     GitCommandResponse,
@@ -12,7 +14,9 @@ import type {
     PushUnsubscribePayload,
     PushVapidPublicKeyResponse,
     SlashCommandsResponse,
+    SkillsResponse,
     SpawnResponse,
+    UploadFileResponse,
     VisibilityPayload,
     SessionResponse,
     SessionsResponse
@@ -235,10 +239,28 @@ export class ApiClient {
         return await this.request<FileReadResponse>(`/api/sessions/${encodeURIComponent(sessionId)}/file?${params.toString()}`)
     }
 
-    async sendMessage(sessionId: string, text: string, localId?: string | null): Promise<void> {
+    async uploadFile(sessionId: string, filename: string, content: string, mimeType: string): Promise<UploadFileResponse> {
+        return await this.request<UploadFileResponse>(`/api/sessions/${encodeURIComponent(sessionId)}/upload`, {
+            method: 'POST',
+            body: JSON.stringify({ filename, content, mimeType })
+        })
+    }
+
+    async deleteUploadFile(sessionId: string, path: string): Promise<DeleteUploadResponse> {
+        return await this.request<DeleteUploadResponse>(`/api/sessions/${encodeURIComponent(sessionId)}/upload/delete`, {
+            method: 'POST',
+            body: JSON.stringify({ path })
+        })
+    }
+
+    async sendMessage(sessionId: string, text: string, localId?: string | null, attachments?: AttachmentMetadata[]): Promise<void> {
         await this.request(`/api/sessions/${encodeURIComponent(sessionId)}/messages`, {
             method: 'POST',
-            body: JSON.stringify({ text, localId: localId ?? undefined })
+            body: JSON.stringify({
+                text,
+                localId: localId ?? undefined,
+                attachments: attachments ?? undefined
+            })
         })
     }
 
@@ -330,19 +352,26 @@ export class ApiClient {
         machineId: string,
         directory: string,
         agent?: 'claude' | 'codex' | 'gemini',
+        model?: string,
         yolo?: boolean,
         sessionType?: 'simple' | 'worktree',
         worktreeName?: string
     ): Promise<SpawnResponse> {
         return await this.request<SpawnResponse>(`/api/machines/${encodeURIComponent(machineId)}/spawn`, {
             method: 'POST',
-            body: JSON.stringify({ directory, agent, yolo, sessionType, worktreeName })
+            body: JSON.stringify({ directory, agent, model, yolo, sessionType, worktreeName })
         })
     }
 
     async getSlashCommands(sessionId: string): Promise<SlashCommandsResponse> {
         return await this.request<SlashCommandsResponse>(
             `/api/sessions/${encodeURIComponent(sessionId)}/slash-commands`
+        )
+    }
+
+    async getSkills(sessionId: string): Promise<SkillsResponse> {
+        return await this.request<SkillsResponse>(
+            `/api/sessions/${encodeURIComponent(sessionId)}/skills`
         )
     }
 
@@ -356,6 +385,18 @@ export class ApiClient {
     async deleteSession(sessionId: string): Promise<void> {
         await this.request(`/api/sessions/${encodeURIComponent(sessionId)}`, {
             method: 'DELETE'
+        })
+    }
+
+    async fetchVoiceToken(options?: { customAgentId?: string; customApiKey?: string }): Promise<{
+        allowed: boolean
+        token?: string
+        agentId?: string
+        error?: string
+    }> {
+        return await this.request('/api/voice/token', {
+            method: 'POST',
+            body: JSON.stringify(options || {})
         })
     }
 }

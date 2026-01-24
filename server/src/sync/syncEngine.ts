@@ -15,13 +15,13 @@ import type { SSEManager } from '../sse/sseManager'
 import { EventPublisher, type SyncEventListener } from './eventPublisher'
 import { MachineCache, type Machine } from './machineCache'
 import { MessageService } from './messageService'
-import { RpcGateway, type RpcCommandResponse, type RpcPathExistsResponse, type RpcReadFileResponse } from './rpcGateway'
+import { RpcGateway, type RpcCommandResponse, type RpcPathExistsResponse, type RpcReadFileResponse, type RpcUploadFileResponse, type RpcDeleteUploadResponse } from './rpcGateway'
 import { SessionCache } from './sessionCache'
 
 export type { Session, SyncEvent } from '@hapi/protocol/types'
 export type { Machine } from './machineCache'
 export type { SyncEventListener } from './eventPublisher'
-export type { RpcCommandResponse, RpcPathExistsResponse, RpcReadFileResponse } from './rpcGateway'
+export type { RpcCommandResponse, RpcPathExistsResponse, RpcReadFileResponse, RpcUploadFileResponse, RpcDeleteUploadResponse } from './rpcGateway'
 
 export class SyncEngine {
     private readonly eventPublisher: EventPublisher
@@ -183,13 +183,25 @@ export class SyncEngine {
         return this.sessionCache.getOrCreateSession(tag, metadata, agentState, namespace)
     }
 
-    getOrCreateMachine(id: string, metadata: unknown, daemonState: unknown, namespace: string): Machine {
-        return this.machineCache.getOrCreateMachine(id, metadata, daemonState, namespace)
+    getOrCreateMachine(id: string, metadata: unknown, runnerState: unknown, namespace: string): Machine {
+        return this.machineCache.getOrCreateMachine(id, metadata, runnerState, namespace)
     }
 
     async sendMessage(
         sessionId: string,
-        payload: { text: string; localId?: string | null; sentFrom?: 'telegram-bot' | 'webapp' }
+        payload: {
+            text: string
+            localId?: string | null
+            attachments?: Array<{
+                id: string
+                filename: string
+                mimeType: string
+                size: number
+                path: string
+                previewUrl?: string
+            }>
+            sentFrom?: 'telegram-bot' | 'webapp'
+        }
     ): Promise<void> {
         await this.messageService.sendMessage(sessionId, payload)
     }
@@ -258,11 +270,12 @@ export class SyncEngine {
         machineId: string,
         directory: string,
         agent: 'claude' | 'codex' | 'gemini' = 'claude',
+        model?: string,
         yolo?: boolean,
         sessionType?: 'simple' | 'worktree',
         worktreeName?: string
     ): Promise<{ type: 'success'; sessionId: string } | { type: 'error'; message: string }> {
-        return await this.rpcGateway.spawnSession(machineId, directory, agent, yolo, sessionType, worktreeName)
+        return await this.rpcGateway.spawnSession(machineId, directory, agent, model, yolo, sessionType, worktreeName)
     }
 
     async checkPathsExist(machineId: string, paths: string[]): Promise<Record<string, boolean>> {
@@ -285,6 +298,14 @@ export class SyncEngine {
         return await this.rpcGateway.readSessionFile(sessionId, path)
     }
 
+    async uploadFile(sessionId: string, filename: string, content: string, mimeType: string): Promise<RpcUploadFileResponse> {
+        return await this.rpcGateway.uploadFile(sessionId, filename, content, mimeType)
+    }
+
+    async deleteUploadFile(sessionId: string, path: string): Promise<RpcDeleteUploadResponse> {
+        return await this.rpcGateway.deleteUploadFile(sessionId, path)
+    }
+
     async runRipgrep(sessionId: string, args: string[], cwd?: string): Promise<RpcCommandResponse> {
         return await this.rpcGateway.runRipgrep(sessionId, args, cwd)
     }
@@ -295,5 +316,13 @@ export class SyncEngine {
         error?: string
     }> {
         return await this.rpcGateway.listSlashCommands(sessionId, agent)
+    }
+
+    async listSkills(sessionId: string): Promise<{
+        success: boolean
+        skills?: Array<{ name: string; description?: string }>
+        error?: string
+    }> {
+        return await this.rpcGateway.listSkills(sessionId)
     }
 }

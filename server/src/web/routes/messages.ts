@@ -1,4 +1,5 @@
 import { Hono } from 'hono'
+import { AttachmentMetadataSchema } from '@hapi/protocol/schemas'
 import { z } from 'zod'
 import type { SyncEngine } from '../../sync/syncEngine'
 import type { WebAppEnv } from '../middleware/auth'
@@ -10,8 +11,9 @@ const querySchema = z.object({
 })
 
 const sendMessageBodySchema = z.object({
-    text: z.string().min(1),
-    localId: z.string().min(1).optional()
+    text: z.string(),
+    localId: z.string().min(1).optional(),
+    attachments: z.array(AttachmentMetadataSchema).optional()
 })
 
 export function createMessagesRoutes(getSyncEngine: () => SyncEngine | null): Hono<WebAppEnv> {
@@ -53,7 +55,17 @@ export function createMessagesRoutes(getSyncEngine: () => SyncEngine | null): Ho
             return c.json({ error: 'Invalid body' }, 400)
         }
 
-        await engine.sendMessage(sessionId, { text: parsed.data.text, localId: parsed.data.localId, sentFrom: 'webapp' })
+        // Require text or attachments
+        if (!parsed.data.text && (!parsed.data.attachments || parsed.data.attachments.length === 0)) {
+            return c.json({ error: 'Message requires text or attachments' }, 400)
+        }
+
+        await engine.sendMessage(sessionId, {
+            text: parsed.data.text,
+            localId: parsed.data.localId,
+            attachments: parsed.data.attachments,
+            sentFrom: 'webapp'
+        })
         return c.json({ ok: true })
     })
 

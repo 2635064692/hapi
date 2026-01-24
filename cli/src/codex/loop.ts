@@ -18,7 +18,7 @@ export interface EnhancedMode {
 interface LoopOptions {
     path: string;
     startingMode?: 'local' | 'remote';
-    startedBy?: 'daemon' | 'terminal';
+    startedBy?: 'runner' | 'terminal';
     onModeChange: (mode: 'local' | 'remote') => void;
     messageQueue: MessageQueue2<EnhancedMode>;
     session: ApiSessionClient;
@@ -26,6 +26,7 @@ interface LoopOptions {
     codexArgs?: string[];
     codexCliOverrides?: CodexCliOverrides;
     permissionMode?: PermissionMode;
+    resumeSessionId?: string;
     onSessionReady?: (session: CodexSession) => void;
 }
 
@@ -37,7 +38,7 @@ export async function loop(opts: LoopOptions): Promise<void> {
         api: opts.api,
         client: opts.session,
         path: opts.path,
-        sessionId: null,
+        sessionId: opts.resumeSessionId ?? null,
         logPath,
         messageQueue: opts.messageQueue,
         onModeChange: opts.onModeChange,

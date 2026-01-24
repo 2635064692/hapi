@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import type { SessionMetadataSummary } from '@/types/api'
+import { isObject } from '@hapi/protocol'
 import { BulbIcon, ClipboardIcon, EyeIcon, FileDiffIcon, GlobeIcon, PuzzleIcon, QuestionIcon, RocketIcon, SearchIcon, TerminalIcon, WrenchIcon } from '@/components/ToolCard/icons'
 import { basename, resolveDisplayPath } from '@/utils/path'
 
@@ -11,10 +12,6 @@ export type ToolPresentation = {
     title: string
     subtitle: string | null
     minimal: boolean
-}
-
-function isObject(value: unknown): value is Record<string, unknown> {
-    return Boolean(value) && typeof value === 'object'
 }
 
 function getInputStringAny(input: unknown, keys: string[]): string | null {
@@ -135,6 +132,21 @@ export const knownTools: Record<string, {
             }
             return null
         },
+        minimal: true
+    },
+    CodexPermission: {
+        icon: () => <QuestionIcon className={DEFAULT_ICON_CLASS} />,
+        title: (opts) => {
+            const tool = getInputStringAny(opts.input, ['tool'])
+            return tool ? `Permission: ${tool}` : 'Permission request'
+        },
+        subtitle: (opts) => getInputStringAny(opts.input, ['message', 'command']) ?? null,
+        minimal: true
+    },
+    shell_command: {
+        icon: () => <TerminalIcon className={DEFAULT_ICON_CLASS} />,
+        title: (opts) => opts.description ?? 'Terminal',
+        subtitle: (opts) => getInputStringAny(opts.input, ['command', 'cmd']),
         minimal: true
     },
     Read: {

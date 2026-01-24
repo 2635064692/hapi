@@ -4,6 +4,7 @@
 
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
+import { isObject } from '@hapi/protocol';
 import { logger } from '@/ui/logger';
 import { isProcessAlive, killProcess } from '@/utils/process';
 import type { CodexSessionConfig, CodexToolResponse } from './types';
@@ -19,10 +20,6 @@ type ElicitRequestedSchema = {
     properties?: Record<string, unknown>;
     required?: string[];
 };
-
-function isObject(value: unknown): value is Record<string, unknown> {
-    return Boolean(value) && typeof value === 'object';
-}
 
 function extractRequestedSchema(params: Record<string, unknown>): ElicitRequestedSchema | null {
     const raw = params.requestedSchema;
@@ -185,7 +182,7 @@ export class CodexMcpClient {
             params: z.object({
                 msg: z.any()
             })
-        }).passthrough();
+        });
 
         const setNotificationHandler =
             this.client.setNotificationHandler.bind(this.client) as (
@@ -248,7 +245,7 @@ export class CodexMcpClient {
                 const toolCallId = extractToolCallId(params) ?? randomUUID();
                 const command = extractCommand(params);
                 const cwd = extractCwd(params);
-                const toolName = 'CodexBash';
+                const toolName = 'CodexPermission';
 
                 // If no permission handler set, deny by default
                 if (!this.permissionHandler) {
@@ -262,8 +259,9 @@ export class CodexMcpClient {
                         toolCallId,
                         toolName,
                         {
-                            command: command ?? [],
-                            cwd: cwd ?? ''
+                            message: typeof params.message === 'string' ? params.message : undefined,
+                            command: command ?? undefined,
+                            cwd: cwd ?? undefined
                         }
                     );
 

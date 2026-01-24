@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef } from 'react'
-import { Outlet, useLocation, useMatchRoute } from '@tanstack/react-router'
+import { Outlet, useLocation, useMatchRoute, useRouter } from '@tanstack/react-router'
 import { useQueryClient } from '@tanstack/react-query'
 import { getTelegramWebApp, isTelegramApp } from '@/hooks/useTelegram'
 import { initializeTheme } from '@/hooks/useTheme'
@@ -15,10 +15,12 @@ import { AppContextProvider } from '@/lib/app-context'
 import { fetchLatestMessages } from '@/lib/message-window-store'
 import { useAppGoBack } from '@/hooks/useAppGoBack'
 import { useTranslation } from '@/lib/use-translation'
+import { VoiceProvider } from '@/lib/voice-context'
 import { LoginPrompt } from '@/components/LoginPrompt'
 import { InstallPrompt } from '@/components/InstallPrompt'
 import { OfflineBanner } from '@/components/OfflineBanner'
 import { SyncingBanner } from '@/components/SyncingBanner'
+import { VoiceErrorBanner } from '@/components/VoiceErrorBanner'
 import { LoadingState } from '@/components/LoadingState'
 import { ToastContainer } from '@/components/ToastContainer'
 import { ToastProvider, useToast } from '@/lib/toast-context'
@@ -42,6 +44,7 @@ function AppInner() {
     const goBack = useAppGoBack()
     const pathname = useLocation({ select: (location) => location.pathname })
     const matchRoute = useMatchRoute()
+    const router = useRouter()
     const { addToast } = useToast()
 
     useEffect(() => {
@@ -124,6 +127,21 @@ function AppInner() {
         syncTokenRef.current = 0
         queryClient.clear()
     }, [baseUrl, queryClient])
+
+    // Clean up URL params after successful auth (for direct access links)
+    useEffect(() => {
+        if (!token || !api) return
+        const { pathname, search, hash, state } = router.history.location
+        const searchParams = new URLSearchParams(search)
+        if (!searchParams.has('server') && !searchParams.has('token')) {
+            return
+        }
+        searchParams.delete('server')
+        searchParams.delete('token')
+        const nextSearch = searchParams.toString()
+        const nextHref = `${pathname}${nextSearch ? `?${nextSearch}` : ''}${hash}`
+        router.history.replace(nextHref, state)
+    }, [token, api, router])
 
     useEffect(() => {
         if (!api || !token) {
@@ -297,14 +315,17 @@ function AppInner() {
     }
 
     return (
-        <AppContextProvider value={{ api, token }}>
-            <SyncingBanner isSyncing={isSyncing} />
-            <OfflineBanner />
-            <div className="h-full flex flex-col">
-                <Outlet />
-            </div>
-            <ToastContainer />
-            <InstallPrompt />
+        <AppContextProvider value={{ api, token, baseUrl }}>
+            <VoiceProvider>
+                <SyncingBanner isSyncing={isSyncing} />
+                <VoiceErrorBanner />
+                <OfflineBanner />
+                <div className="h-full flex flex-col">
+                    <Outlet />
+                </div>
+                <ToastContainer />
+                <InstallPrompt />
+            </VoiceProvider>
         </AppContextProvider>
     )
 }

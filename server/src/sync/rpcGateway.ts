@@ -16,6 +16,17 @@ export type RpcReadFileResponse = {
     error?: string
 }
 
+export type RpcUploadFileResponse = {
+    success: boolean
+    path?: string
+    error?: string
+}
+
+export type RpcDeleteUploadResponse = {
+    success: boolean
+    error?: string
+}
+
 export type RpcPathExistsResponse = {
     exists: Record<string, boolean>
 }
@@ -83,6 +94,7 @@ export class RpcGateway {
         machineId: string,
         directory: string,
         agent: 'claude' | 'codex' | 'gemini' = 'claude',
+        model?: string,
         yolo?: boolean,
         sessionType?: 'simple' | 'worktree',
         worktreeName?: string
@@ -91,7 +103,7 @@ export class RpcGateway {
             const result = await this.machineRpc(
                 machineId,
                 'spawn-happy-session',
-                { type: 'spawn-in-directory', directory, agent, yolo, sessionType, worktreeName }
+                { type: 'spawn-in-directory', directory, agent, model, yolo, sessionType, worktreeName }
             )
             if (result && typeof result === 'object') {
                 const obj = result as Record<string, unknown>
@@ -142,6 +154,14 @@ export class RpcGateway {
         return await this.sessionRpc(sessionId, 'readFile', { path }) as RpcReadFileResponse
     }
 
+    async uploadFile(sessionId: string, filename: string, content: string, mimeType: string): Promise<RpcUploadFileResponse> {
+        return await this.sessionRpc(sessionId, 'uploadFile', { sessionId, filename, content, mimeType }) as RpcUploadFileResponse
+    }
+
+    async deleteUploadFile(sessionId: string, path: string): Promise<RpcDeleteUploadResponse> {
+        return await this.sessionRpc(sessionId, 'deleteUpload', { sessionId, path }) as RpcDeleteUploadResponse
+    }
+
     async runRipgrep(sessionId: string, args: string[], cwd?: string): Promise<RpcCommandResponse> {
         return await this.sessionRpc(sessionId, 'ripgrep', { args, cwd }) as RpcCommandResponse
     }
@@ -154,6 +174,18 @@ export class RpcGateway {
         return await this.sessionRpc(sessionId, 'listSlashCommands', { agent }) as {
             success: boolean
             commands?: Array<{ name: string; description?: string; source: 'builtin' | 'user' }>
+            error?: string
+        }
+    }
+
+    async listSkills(sessionId: string): Promise<{
+        success: boolean
+        skills?: Array<{ name: string; description?: string }>
+        error?: string
+    }> {
+        return await this.sessionRpc(sessionId, 'listSkills', {}) as {
+            success: boolean
+            skills?: Array<{ name: string; description?: string }>
             error?: string
         }
     }
